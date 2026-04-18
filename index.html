@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meta-Analysis Platform v2.0 - Mahmood Ahmad</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- PDF.js for PDF processing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <h1>Meta-Analysis Platform</h1>
+                <span class="version">v2.0</span>
+            </div>
+            <div class="header-right">
+                <span class="author">By Mahmood Ahmad</span>
+                <button id="btn-help" class="btn btn-sm btn-outline" title="Help & Shortcuts (Ctrl+/)" onclick="KeyboardShortcuts.showShortcutsModal()">
+                    <span>?</span> Help
+                </button>
+                <button id="btn-examples" class="btn btn-sm btn-outline" title="Load Example Dataset (Ctrl+D)" onclick="showExampleDatasetsModal()">
+                    <span>📊</span> Examples
+                </button>
+                <span class="bismillah">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</span>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="main-nav">
+            <button class="nav-tab active" data-tab="search">
+                <span class="tab-icon">🔍</span>
+                Registry Search
+            </button>
+            <button class="nav-tab" data-tab="extraction">
+                <span class="tab-icon">📄</span>
+                Data Extraction
+            </button>
+            <button class="nav-tab" data-tab="analysis">
+                <span class="tab-icon">📊</span>
+                Analysis
+            </button>
+            <button class="nav-tab" data-tab="export">
+                <span class="tab-icon">💾</span>
+                Export
+            </button>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Search Tab -->
+            <section id="search-tab" class="tab-content active">
+                <div class="panel">
+                    <h2>PICO Search</h2>
+                    <div class="pico-form">
+                        <div class="form-group">
+                            <label for="pico-population">Population</label>
+                            <input type="text" id="pico-population" placeholder="e.g., Heart failure with reduced ejection fraction">
+                        </div>
+                        <div class="form-group">
+                            <label for="pico-intervention">Intervention</label>
+                            <input type="text" id="pico-intervention" placeholder="e.g., SGLT2 inhibitors">
+                        </div>
+                        <div class="form-group">
+                            <label for="pico-comparator">Comparator</label>
+                            <input type="text" id="pico-comparator" placeholder="e.g., Placebo or standard care">
+                        </div>
+                        <div class="form-group">
+                            <label for="pico-outcomes">Outcomes</label>
+                            <input type="text" id="pico-outcomes" placeholder="e.g., Mortality, hospitalization">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="study-type">Study Type</label>
+                                <select id="study-type">
+                                    <option value="INTERVENTIONAL">Interventional (RCT)</option>
+                                    <option value="OBSERVATIONAL">Observational</option>
+                                    <option value="">All Types</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="study-status">Status</label>
+                                <select id="study-status">
+                                    <option value="COMPLETED">Completed</option>
+                                    <option value="ACTIVE_NOT_RECRUITING">Active, not recruiting</option>
+                                    <option value="">All Statuses</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button id="search-btn" class="btn btn-primary">
+                            <span class="btn-icon">🔍</span>
+                            Search Registries
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Search Results -->
+                <div class="panel" id="search-results-panel" style="display: none;">
+                    <div class="panel-header">
+                        <h2>Search Results</h2>
+                        <div class="prisma-summary">
+                            <span class="prisma-item">Identified: <strong id="prisma-identified">0</strong></span>
+                            <span class="prisma-item">Deduplicated: <strong id="prisma-dedup">0</strong></span>
+                            <span class="prisma-item">Screened: <strong id="prisma-screened">0</strong></span>
+                            <span class="prisma-item">Included: <strong id="prisma-included">0</strong></span>
+                        </div>
+                    </div>
+                    <div id="search-results" class="results-grid"></div>
+                </div>
+            </section>
+
+            <!-- Extraction Tab -->
+            <section id="extraction-tab" class="tab-content">
+                <div class="panel">
+                    <h2>PDF Data Extraction</h2>
+                    <div class="upload-zone" id="pdf-drop-zone">
+                        <div class="upload-icon">📄</div>
+                        <p>Drag & drop PDF files here</p>
+                        <p class="upload-subtitle">or click to browse</p>
+                        <input type="file" id="pdf-input" accept=".pdf" multiple hidden>
+                    </div>
+                    <div class="extraction-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="extract-tables" checked>
+                            Extract Tables
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="extract-prose" checked>
+                            Extract Prose
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="extract-km" checked>
+                            Digitize KM Curves
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="extract-supplements" checked>
+                            Process Supplements
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Extraction Queue -->
+                <div class="panel" id="extraction-queue-panel">
+                    <h2>Extraction Queue</h2>
+                    <div id="extraction-queue" class="queue-list"></div>
+                </div>
+
+                <!-- Extracted Data Preview -->
+                <div class="panel" id="extracted-data-panel" style="display: none;">
+                    <div class="panel-header">
+                        <h2>Extracted Data</h2>
+                        <div class="confidence-badge">
+                            Confidence: <span id="overall-confidence">--</span>%
+                        </div>
+                    </div>
+
+                    <div class="data-tabs">
+                        <button class="data-tab active" data-subtab="trial-info">Trial Info</button>
+                        <button class="data-tab" data-subtab="outcomes">Outcomes</button>
+                        <button class="data-tab" data-subtab="baseline">Baseline</button>
+                        <button class="data-tab" data-subtab="subgroups">Subgroups</button>
+                        <button class="data-tab" data-subtab="verification">Verification</button>
+                        <button class="data-tab" data-subtab="raw-tables">Raw Tables</button>
+                    </div>
+
+                    <div id="trial-info-subtab" class="data-subtab-content active">
+                        <div class="data-grid" id="trial-info-grid"></div>
+                    </div>
+                    <div id="outcomes-subtab" class="data-subtab-content">
+                        <table class="data-table" id="outcomes-table">
+                            <thead>
+                                <tr>
+                                    <th>Outcome</th>
+                                    <th>Events (Tx)</th>
+                                    <th>Events (Ctrl)</th>
+                                    <th>HR/RR/OR</th>
+                                    <th>95% CI</th>
+                                    <th>P-value</th>
+                                    <th>Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div id="baseline-subtab" class="data-subtab-content">
+                        <table class="data-table" id="baseline-table">
+                            <thead>
+                                <tr>
+                                    <th>Characteristic</th>
+                                    <th>Treatment</th>
+                                    <th>Control</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div id="subgroups-subtab" class="data-subtab-content">
+                        <div id="subgroups-container"></div>
+                    </div>
+                    <div id="verification-subtab" class="data-subtab-content">
+                        <div class="verification-workflow">
+                            <div class="verification-header">
+                                <h3>Data Verification Queue</h3>
+                                <div class="verification-stats">
+                                    <span class="stat pending">Pending: <strong id="verify-pending">0</strong></span>
+                                    <span class="stat verified">Verified: <strong id="verify-complete">0</strong></span>
+                                    <span class="stat flagged">Flagged: <strong id="verify-flagged">0</strong></span>
+                                </div>
+                            </div>
+                            <div class="verification-filters">
+                                <select id="verify-filter-priority">
+                                    <option value="">All Priorities</option>
+                                    <option value="critical">Critical</option>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                                <select id="verify-filter-type">
+                                    <option value="">All Types</option>
+                                    <option value="outcome">Outcomes</option>
+                                    <option value="baseline">Baseline</option>
+                                    <option value="sample_size">Sample Size</option>
+                                </select>
+                            </div>
+                            <div id="verification-queue" class="verification-queue"></div>
+                            <div class="verification-actions">
+                                <button id="verify-all-btn" class="btn btn-secondary">Verify All Low-Risk Items</button>
+                                <button id="export-audit-btn" class="btn btn-secondary">Export Audit Log</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="raw-tables-subtab" class="data-subtab-content">
+                        <div id="raw-tables-container"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Analysis Tab -->
+            <section id="analysis-tab" class="tab-content">
+                <div class="panel">
+                    <h2>Meta-Analysis Configuration</h2>
+                    <div class="analysis-config">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="effect-measure">Effect Measure</label>
+                                <select id="effect-measure">
+                                    <option value="HR">Hazard Ratio (HR)</option>
+                                    <option value="RR">Risk Ratio (RR)</option>
+                                    <option value="OR">Odds Ratio (OR)</option>
+                                    <option value="SMD">Standardized Mean Difference</option>
+                                    <option value="MD">Mean Difference</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="meta-model">Model</label>
+                                <select id="meta-model">
+                                    <option value="random">Random Effects (DL)</option>
+                                    <option value="random-reml">Random Effects (REML)</option>
+                                    <option value="fixed">Fixed Effect (IV)</option>
+                                    <option value="fixed-mh">Fixed Effect (MH)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="outcome-select">Select Outcome</label>
+                                <select id="outcome-select">
+                                    <option value="">-- Load trials first --</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="ci-method">CI Method
+                                    <span class="tooltip-icon" data-tooltip="ci-method-help">ⓘ</span>
+                                </label>
+                                <select id="ci-method">
+                                    <option value="hksj">HKSJ (Recommended)</option>
+                                    <option value="wald">Wald (Standard)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- CI Method Guidance Panel -->
+                        <div class="method-guidance" id="ci-method-guidance">
+                            <div class="guidance-header">
+                                <span class="guidance-icon">💡</span>
+                                <strong>CI Method Recommendation</strong>
+                            </div>
+                            <div class="guidance-content">
+                                <div class="guidance-option selected" id="hksj-guidance">
+                                    <h4>HKSJ (Hartung-Knapp-Sidik-Jonkman)</h4>
+                                    <p><strong>Recommended for most meta-analyses.</strong></p>
+                                    <ul>
+                                        <li>Uses t-distribution instead of normal distribution</li>
+                                        <li>Produces wider, more accurate confidence intervals</li>
+                                        <li>Better coverage probability, especially with few studies (k &lt; 10)</li>
+                                        <li>More conservative when heterogeneity is uncertain</li>
+                                    </ul>
+                                    <p class="reference">Reference: IntHout J, et al. BMC Med Res Methodol. 2014;14:25</p>
+                                </div>
+                                <div class="guidance-option" id="wald-guidance" style="display:none;">
+                                    <h4>Wald (Standard)</h4>
+                                    <p><strong>Traditional method, may be preferred for comparability.</strong></p>
+                                    <ul>
+                                        <li>Uses normal (z) distribution for confidence intervals</li>
+                                        <li>Standard in older software and publications</li>
+                                        <li>May have poor coverage with few studies or high heterogeneity</li>
+                                        <li>Use when comparing with published meta-analyses using Wald CIs</li>
+                                    </ul>
+                                    <p class="reference">Reference: Borenstein M, et al. Introduction to Meta-Analysis. Wiley, 2009</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button id="run-analysis-btn" class="btn btn-primary">
+                            <span class="btn-icon">📊</span>
+                            Run Meta-Analysis
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Included Studies -->
+                <div class="panel">
+                    <h2>Included Studies</h2>
+                    <table class="data-table" id="studies-table">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="select-all-studies"></th>
+                                <th>Trial</th>
+                                <th>Year</th>
+                                <th>N</th>
+                                <th>Effect</th>
+                                <th>95% CI</th>
+                                <th>Weight</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- Results Panel -->
+                <div class="panel" id="analysis-results-panel" style="display: none;">
+                    <h2>Analysis Results</h2>
+
+                    <div class="results-summary">
+                        <div class="result-card">
+                            <div class="result-label">Pooled Effect</div>
+                            <div class="result-value" id="pooled-effect">--</div>
+                            <div class="result-ci" id="pooled-ci">95% CI: --</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">P-value</div>
+                            <div class="result-value" id="pooled-pvalue">--</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">I² Heterogeneity</div>
+                            <div class="result-value" id="i-squared">--</div>
+                            <div class="result-ci" id="tau-squared">τ²: --</div>
+                        </div>
+                        <div class="result-card">
+                            <div class="result-label">Prediction Interval</div>
+                            <div class="result-value" id="prediction-interval">--</div>
+                        </div>
+                    </div>
+
+                    <!-- Effect Size Interpretation Panel -->
+                    <div class="panel effect-preview-panel" id="effect-preview-panel" style="margin-bottom: 16px;">
+                        <h3>Effect Size Interpretation</h3>
+                        <div class="interpretation-content" id="interpretation-content">
+                            <p class="placeholder">Run an analysis to see AI-powered interpretation of results.</p>
+                        </div>
+                        <div class="confidence-score" id="confidence-score" style="display: none;">
+                            <span>Confidence Score:</span>
+                            <div class="confidence-meter">
+                                <div class="confidence-meter-fill" id="confidence-fill" style="width: 0%;"></div>
+                            </div>
+                            <span id="confidence-value">--</span>
+                        </div>
+                    </div>
+
+                    <!-- Forest Plot -->
+                    <div class="plot-container">
+                        <h3>Forest Plot</h3>
+                        <canvas id="forest-plot" width="800" height="400"></canvas>
+                    </div>
+
+                    <!-- Funnel Plot -->
+                    <div class="plot-container">
+                        <h3>Funnel Plot</h3>
+                        <canvas id="funnel-plot" width="600" height="400"></canvas>
+                    </div>
+
+                    <!-- Bias Assessment -->
+                    <div class="bias-assessment">
+                        <h3>Publication Bias Assessment</h3>
+                        <div class="bias-tests">
+                            <div class="bias-test">
+                                <span class="test-name">Egger's Test</span>
+                                <span class="test-result" id="egger-result">--</span>
+                            </div>
+                            <div class="bias-test">
+                                <span class="test-name">Begg's Test</span>
+                                <span class="test-result" id="begg-result">--</span>
+                            </div>
+                            <div class="bias-test">
+                                <span class="test-name">Trim & Fill</span>
+                                <span class="test-result" id="trim-fill-result">--</span>
+                            </div>
+                            <div class="bias-test">
+                                <span class="test-name">3PSM Selection</span>
+                                <span class="test-result" id="selection-3psm-result">--</span>
+                            </div>
+                            <div class="bias-test" title="Copas & Shi (2000) sensitivity analysis">
+                                <span class="test-name">Copas Model</span>
+                                <span class="test-result" id="copas-result">--</span>
+                            </div>
+                        </div>
+                        <div class="bias-advanced-controls" style="margin-top: 8px;">
+                            <button id="run-copas-btn" class="btn btn-sm btn-outline" title="Run Copas selection model sensitivity analysis">
+                                Run Copas Analysis
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Sensitivity Analysis -->
+                    <div class="sensitivity-analysis">
+                        <h3>Sensitivity Analysis</h3>
+                        <div class="sensitivity-controls">
+                            <button id="run-loo-btn" class="btn btn-secondary">
+                                <span class="btn-icon">🔄</span>
+                                Leave-One-Out
+                            </button>
+                            <button id="run-cumulative-btn" class="btn btn-secondary">
+                                <span class="btn-icon">📈</span>
+                                Cumulative Meta-Analysis
+                            </button>
+                            <button id="run-influence-btn" class="btn btn-secondary">
+                                <span class="btn-icon">🎯</span>
+                                Influence Diagnostics
+                            </button>
+                        </div>
+                        <div id="sensitivity-results" class="sensitivity-results" style="display: none;">
+                            <div class="sensitivity-summary" id="sensitivity-summary"></div>
+                            <canvas id="sensitivity-plot" width="800" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Export Tab -->
+            <section id="export-tab" class="tab-content">
+                <div class="panel">
+                    <h2>Export Data</h2>
+                    <div class="export-options">
+                        <div class="export-card" data-format="json">
+                            <div class="export-icon">{ }</div>
+                            <h3>JSON</h3>
+                            <p>Full structured data for MetaEngine</p>
+                        </div>
+                        <div class="export-card" data-format="csv">
+                            <div class="export-icon">📊</div>
+                            <h3>CSV</h3>
+                            <p>Spreadsheet format for Excel review</p>
+                        </div>
+                        <div class="export-card" data-format="revman">
+                            <div class="export-icon">🔬</div>
+                            <h3>RevMan</h3>
+                            <p>Cochrane Review Manager format</p>
+                        </div>
+                        <div class="export-card" data-format="prisma">
+                            <div class="export-icon">📋</div>
+                            <h3>PRISMA</h3>
+                            <p>PRISMA 2020 data extraction form</p>
+                        </div>
+                        <div class="export-card" data-format="grade">
+                            <div class="export-icon">⊕</div>
+                            <h3>GRADE</h3>
+                            <p>Summary of Findings table</p>
+                        </div>
+                        <div class="export-card" data-format="pdf">
+                            <div class="export-icon">📄</div>
+                            <h3>PDF Report</h3>
+                            <p>Full analysis report with plots</p>
+                        </div>
+                        <div class="export-card" data-format="excel">
+                            <div class="export-icon">📗</div>
+                            <h3>Excel</h3>
+                            <p>Multi-sheet workbook with all data</p>
+                        </div>
+                        <div class="export-card" data-format="audit">
+                            <div class="export-icon">📝</div>
+                            <h3>Audit Log</h3>
+                            <p>Complete audit trail for reproducibility</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audit Log Panel -->
+                <div class="panel" id="audit-log-panel">
+                    <h2>Audit Log</h2>
+                    <div class="audit-summary" id="audit-summary-stats"></div>
+                    <div class="audit-log-viewer" id="audit-log-viewer"></div>
+                </div>
+
+                <!-- Export Preview -->
+                <div class="panel" id="export-preview-panel">
+                    <h2>Export Preview</h2>
+                    <pre id="export-preview" class="code-preview"></pre>
+                    <button id="download-export-btn" class="btn btn-primary">
+                        <span class="btn-icon">💾</span>
+                        Download
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <div class="status-left">
+                <span id="status-message">Ready</span>
+            </div>
+            <div class="status-right">
+                <span id="processing-status"></span>
+                <div id="progress-bar" class="progress-bar" style="display: none;">
+                    <div class="progress-fill"></div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title"></h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-cancel">Cancel</button>
+                <button class="btn btn-primary modal-confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Modules -->
+    <script type="module" src="src/main.js"></script>
+
+<!-- In-app Tutorial Modal -->
+<div id="tutorial-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 700px;">
+        <h2>Quick Start Guide</h2>
+        <div class="tutorial-steps">
+            <div class="tutorial-step">
+                <h3>1. Search for Studies</h3>
+                <p>Use the PICO form to search clinical trial registries. Enter your Population, Intervention, Comparator, and Outcomes.</p>
+            </div>
+            <div class="tutorial-step">
+                <h3>2. Extract Data</h3>
+                <p>Upload PDF files or enter data manually. The platform extracts effect sizes, sample sizes, and other relevant data.</p>
+            </div>
+            <div class="tutorial-step">
+                <h3>3. Run Analysis</h3>
+                <p>Select your effect measure and model type. Click "Run Analysis" to compute pooled estimates with forest and funnel plots.</p>
+            </div>
+            <div class="tutorial-step">
+                <h3>4. Export Results</h3>
+                <p>Export to CSV, JSON, or generate reproducible R code. Download PRISMA flow diagrams and validation reports.</p>
+            </div>
+        </div>
+        <div class="tutorial-shortcuts">
+            <h3>Keyboard Shortcuts</h3>
+            <ul>
+                <li><kbd>Alt+1-4</kbd> - Switch tabs</li>
+                <li><kbd>Ctrl+Enter</kbd> - Run analysis</li>
+                <li><kbd>Ctrl+D</kbd> - Load example dataset</li>
+                <li><kbd>Ctrl+/</kbd> - Show all shortcuts</li>
+            </ul>
+        </div>
+        <button onclick="document.getElementById('tutorial-modal').style.display='none'" class="btn btn-primary">Got it!</button>
+    </div>
+</div>
+
+</body>
+</html>
