@@ -1158,16 +1158,17 @@ export function randomEffectsML(studies, options = {}) {
 
 /**
  * Estimate τ² using REML (Restricted Maximum Likelihood)
- * Uses Fisher scoring algorithm
+ * Uses one-dimensional profile likelihood optimization, which is more
+ * stable than the previous Fisher-scoring update for heterogeneous datasets.
  */
 function estimateTau2REML(studies, fixedEffect, Q, df) {
     const k = studies.length;
     if (k < 2) return 0;
 
-    // Pre-extract yi and vi to avoid repeated property access
     const yi = new Float64Array(k);
     const vi = new Float64Array(k);
-    let sumWi = 0, sumWiSq = 0;
+    let sumWi = 0;
+    let sumWiSq = 0;
 
     for (let i = 0; i < k; i++) {
         yi[i] = studies[i].yi;
@@ -1178,56 +1179,94 @@ function estimateTau2REML(studies, fixedEffect, Q, df) {
     }
 
     const C = sumWi - (sumWiSq / sumWi);
+    const dlTau2 = C > 0 ? Math.max(0, (Q - df) / C) : 0;
 
-    // Initial estimate (DL)
-    let tau2 = Math.max(0, (Q - df) / C);
-
-    // Fisher scoring iterations (optimized - avoids array allocations)
-    const maxIter = 30; // Reduced from 50 - typically converges in 5-10
-    const tol = 1e-8;
-
-    // Reusable array for weights
-    const wStar = new Float64Array(k);
-
-    for (let iter = 0; iter < maxIter; iter++) {
-        // Calculate weights and sums in single pass
-        let sumWStar = 0, sumWStarYi = 0, sumWSq = 0;
+    function negRestrictedLogLikelihood(tau2) {
+        let sumW = 0;
+        let sumWY = 0;
 
         for (let i = 0; i < k; i++) {
             const w = 1 / (vi[i] + tau2);
-            wStar[i] = w;
-            sumWStar += w;
-            sumWStarYi += w * yi[i];
-            sumWSq += w * w;
+            sumW += w;
+            sumWY += w * yi[i];
         }
 
-        const muHat = sumWStarYi / sumWStar;
+        if (!isFinite(sumW) || sumW <= 0) {
+            return Number.POSITIVE_INFINITY;
+        }
 
-        // Calculate score components in single pass
-        let sumWSqResid = 0;
+        const muHat = sumWY / sumW;
+        let nll = 0.5 * Math.log(sumW);
+
         for (let i = 0; i < k; i++) {
+            const varTotal = vi[i] + tau2;
             const resid = yi[i] - muHat;
-            sumWSqResid += wStar[i] * wStar[i] * resid * resid;
+            nll += 0.5 * Math.log(varTotal);
+            nll += 0.5 * resid * resid / varTotal;
         }
 
-        // Score function (first derivative of REML log-likelihood)
-        const score = -0.5 * sumWSq + 0.5 * sumWSq / sumWStar + 0.5 * sumWSqResid;
-
-        // Fisher information (negative second derivative)
-        const fisher = 0.5 * sumWSq - 0.5 * sumWSq * sumWSq / (sumWStar * sumWStar);
-
-        if (Math.abs(fisher) < tol) break;
-
-        const delta = score / fisher;
-        const newTau2 = Math.max(0, tau2 + delta);
-
-        if (Math.abs(newTau2 - tau2) < tol) {
-            return newTau2;
-        }
-        tau2 = newTau2;
+        return nll;
     }
 
-    return tau2;
+    const tolerance = 1e-10;
+    let upper = Math.max(1, dlTau2 * 4 + 1);
+    let f0 = negRestrictedLogLikelihood(0);
+    let fUpper = negRestrictedLogLikelihood(upper);
+
+    // Expand the search interval until the upper bound is safely past the minimum.
+    for (let i = 0; i < 20 && (!isFinite(fUpper) || fUpper <= f0); i++) {
+        upper *= 2;
+        fUpper = negRestrictedLogLikelihood(upper);
+    }
+
+    // Coarse grid search to bracket the minimum.
+    const gridPoints = 64;
+    let bestTau2 = 0;
+    let bestValue = f0;
+    let bestIndex = 0;
+
+    for (let i = 1; i <= gridPoints; i++) {
+        const tau2 = upper * i / gridPoints;
+        const value = negRestrictedLogLikelihood(tau2);
+        if (value < bestValue) {
+            bestValue = value;
+            bestTau2 = tau2;
+            bestIndex = i;
+        }
+    }
+
+    let left = bestIndex <= 1 ? 0 : upper * (bestIndex - 1) / gridPoints;
+    let right = bestIndex >= gridPoints ? upper : upper * (bestIndex + 1) / gridPoints;
+
+    // Golden-section search within the bracket.
+    const phi = (1 + Math.sqrt(5)) / 2;
+    let c = right - (right - left) / phi;
+    let d = left + (right - left) / phi;
+    let fc = negRestrictedLogLikelihood(c);
+    let fd = negRestrictedLogLikelihood(d);
+
+    for (let iter = 0; iter < 100; iter++) {
+        if (Math.abs(right - left) < tolerance * Math.max(1, bestTau2 || 1)) {
+            break;
+        }
+
+        if (fc < fd) {
+            right = d;
+            d = c;
+            fd = fc;
+            c = right - (right - left) / phi;
+            fc = negRestrictedLogLikelihood(c);
+        } else {
+            left = c;
+            c = d;
+            fc = fd;
+            d = left + (right - left) / phi;
+            fd = negRestrictedLogLikelihood(d);
+        }
+    }
+
+    bestTau2 = (left + right) / 2;
+    return Math.max(0, bestTau2);
 }
 
 /**
@@ -1828,6 +1867,9 @@ export function fixedEffectsIV(studies, options = {}) {
     };
 }
 
+// Legacy aliases retained for older test and UI code.
+export const fixedEffectsMeta = fixedEffectsIV;
+
 /**
  * Egger's test for publication bias
  * With power warnings as recommended by Sterne et al. (2011)
@@ -1936,6 +1978,8 @@ export function eggersTest(studies, options = {}) {
             : []
     };
 }
+
+export const eggerTest = eggersTest;
 
 /**
  * Peters' test for publication bias (alternative to Egger's for binary outcomes)
@@ -2318,6 +2362,8 @@ export function beggsTest(studies, options = {}) {
     };
 }
 
+export const beggTest = beggsTest;
+
 /**
  * Trim and fill method for publication bias
  * Implements multiple estimators: L0, R0, Q0 (Duval & Tweedie, 2000)
@@ -2415,6 +2461,7 @@ export function trimAndFill(studies, options = {}) {
         return {
             success: true,
             missing_studies: 0,
+            n_missing: 0,
             estimator: config.estimator,
             side: side,
             original: initial.pooled,
@@ -2457,6 +2504,7 @@ export function trimAndFill(studies, options = {}) {
     return {
         success: true,
         missing_studies: k0,
+        n_missing: k0,
         estimator: config.estimator,
         side: side,
         converged: converged,
@@ -3476,6 +3524,15 @@ export function leaveOneOut(studies, options = {}) {
             I2: full.heterogeneity.I2
         },
         leave_one_out: results,
+        results: results.map(result => ({
+            excluded: result.study,
+            effect: result.pooled_effect,
+            ci_lower: result.ci_lower,
+            ci_upper: result.ci_upper,
+            p_value: result.p_value,
+            tau2: result.tau2,
+            I2: result.I2
+        })),
         summary: {
             influential_count: influentialStudies.length,
             most_influential: maxInfluence,
@@ -4170,6 +4227,12 @@ export function subgroupAnalysis(studies, subgroupVar, options = {}) {
             df_between: df_between,
             p_between: 1 - chiSquareCDF(Q_between_direct, df_between),
             significant_difference: (1 - chiSquareCDF(Q_between_direct, df_between)) < 0.05
+        },
+        test_for_subgroup_differences: {
+            Q: Q_between_direct,
+            df: df_between,
+            p_value: 1 - chiSquareCDF(Q_between_direct, df_between),
+            significant: (1 - chiSquareCDF(Q_between_direct, df_between)) < 0.05
         },
         summary: {
             effect_range: effectRange,

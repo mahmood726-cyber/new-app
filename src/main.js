@@ -1972,6 +1972,9 @@ function showModal(title, content) {
 
 // Export for global access
 window.AppState = AppState;
+window.KeyboardShortcuts = KeyboardShortcuts;
+window.showExampleDatasetsModal = showExampleDatasetsModal;
+window.loadDataset = loadDataset;
 window.showToast = showToast;
 
 // Export extraction functions for advanced usage

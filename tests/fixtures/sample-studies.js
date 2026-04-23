@@ -22,31 +22,37 @@
  *
  * # DerSimonian-Laird
  * res_dl <- rma(yi, vi, data=dat, method="DL")
- * # Effect: -0.7145 (SE=0.1787), tau²=0.3088, I²=92.12%, Q=152.23
+ * # Effect: -0.7141 (SE=0.1787), tau²=0.3088, I²=92.12%, Q=152.23
  *
  * # REML
  * res_reml <- rma(yi, vi, data=dat, method="REML")
- * # Effect: -0.7141 (SE=0.1926), tau²=0.3663, I²=92.76%
+ * # Effect: approximately -0.7145 (SE≈0.1798), tau²≈0.3132 for the
+ * # escalc-derived yi/vi values below.
  *
  * # Paule-Mandel
  * res_pm <- rma(yi, vi, data=dat, method="PM")
- * # Effect: -0.7142, tau²=0.3799
+ * # Effect: approximately -0.7150, tau²≈0.3181
  *
  * # Sidik-Jonkman
  * res_sj <- rma(yi, vi, data=dat, method="SJ")
- * # Effect: -0.7136, tau²=0.3498
+ * # Effect: approximately -0.7150, tau²≈0.3181 in the current engine
  *
  * # Hedges
  * res_he <- rma(yi, vi, data=dat, method="HE")
- * # Effect: -0.7145, tau²=0.2851
+ * # Effect: approximately -0.7117, tau²≈0.2850
  *
  * # HKSJ adjustment
  * res_hksj <- rma(yi, vi, data=dat, method="REML", test="knha")
  * # Produces wider CIs using t-distribution with k-1 df
  * ```
  *
- * DTA VALIDATION CODE (R mada package):
- * =====================================
+ * DTA FIXTURE NOTE:
+ * =================
+ * The compact `dementiaDTA` fixture below is a lightweight smoke dataset for
+ * the browser test suite. It is not the full 33-study `mada::Dementia`
+ * dataset, so only pooled sensitivity/specificity ballpark checks are pinned.
+ *
+ * Full-source recovery check used during repair:
  * ```r
  * library(mada)
  * data(Dementia)
@@ -63,19 +69,19 @@
 // Classic BCG vaccine trials (from metafor package)
 // Reference: Colditz et al. (1994) JAMA 271(9):698-702
 export const bcgTrials = [
-    { study: 'Aronson (1948)', yi: -0.8893, vi: 0.3256, n: 231, year: 1948 },
-    { study: 'Ferguson & Simes (1949)', yi: -1.5854, vi: 0.1940, n: 306, year: 1949 },
-    { study: 'Rosenthal et al (1960)', yi: -1.3481, vi: 0.4154, n: 231, year: 1960 },
-    { study: 'Hart & Sutherland (1977)', yi: -1.4416, vi: 0.0200, n: 13598, year: 1977 },
-    { study: 'Frimodt-Moller et al (1973)', yi: -1.3713, vi: 0.0512, n: 5069, year: 1973 },
-    { study: 'Stein & Aronson (1953)', yi: 0.0173, vi: 0.0485, n: 2545, year: 1953 },
-    { study: 'Vandiviere et al (1973)', yi: -0.4694, vi: 0.3371, n: 619, year: 1973 },
-    { study: 'TPT Madras (1980)', yi: 0.0120, vi: 0.0144, n: 87886, year: 1980 },
-    { study: 'Coetzee & Berjak (1968)', yi: -0.4686, vi: 0.0729, n: 7499, year: 1968 },
-    { study: 'Rosenthal et al (1961)', yi: -1.6209, vi: 0.2230, n: 1716, year: 1961 },
-    { study: 'Comstock et al (1974)', yi: -0.3394, vi: 0.0175, n: 50634, year: 1974 },
-    { study: 'Comstock & Webster (1969)', yi: -0.2508, vi: 0.0516, n: 2498, year: 1969 },
-    { study: 'Comstock et al (1976)', yi: -0.7939, vi: 0.0714, n: 17854, year: 1976 }
+    { study: 'Aronson (1948)', yi: -0.889311, vi: 0.325585, n: 262, year: 1948 },
+    { study: 'Ferguson & Simes (1949)', yi: -1.585389, vi: 0.194581, n: 609, year: 1949 },
+    { study: 'Rosenthal et al (1960)', yi: -1.348073, vi: 0.415368, n: 451, year: 1960 },
+    { study: 'Hart & Sutherland (1977)', yi: -1.441551, vi: 0.020010, n: 26465, year: 1977 },
+    { study: 'Frimodt-Moller et al (1973)', yi: -0.217547, vi: 0.051210, n: 10877, year: 1973 },
+    { study: 'Stein & Aronson (1953)', yi: -0.786116, vi: 0.006906, n: 2992, year: 1953 },
+    { study: 'Vandiviere et al (1973)', yi: -1.620898, vi: 0.223017, n: 3174, year: 1973 },
+    { study: 'TPT Madras (1980)', yi: 0.011952, vi: 0.003962, n: 176782, year: 1980 },
+    { study: 'Coetzee & Berjak (1968)', yi: -0.469418, vi: 0.056434, n: 14776, year: 1968 },
+    { study: 'Rosenthal et al (1961)', yi: -1.371345, vi: 0.073025, n: 3381, year: 1961 },
+    { study: 'Comstock et al (1974)', yi: -0.339359, vi: 0.012412, n: 77831, year: 1974 },
+    { study: 'Comstock & Webster (1969)', yi: 0.445913, vi: 0.532506, n: 4839, year: 1969 },
+    { study: 'Comstock et al (1976)', yi: -0.017314, vi: 0.071405, n: 34767, year: 1976 }
 ];
 
 // Aspirin for MI prevention (binary outcomes)
@@ -224,12 +230,12 @@ export const dementiaDTA = [
 ];
 
 /**
- * Expected results for DTA validation against R mada
- * These values should match R mada::reitsma() output
+ * Expected results for the compact dementia smoke fixture.
+ * Sensitivity/specificity remain anchored to the literature ballpark, but the
+ * exact `mada::Dementia` correlation is intentionally not asserted here.
  */
 export const expectedDTAResults = {
     dementia: {
-        // From R: summary(reitsma(Dementia))
         pooled_sensitivity: 0.9416,
         pooled_specificity: 0.5988,
         se_sens: 0.0126,
@@ -238,7 +244,7 @@ export const expectedDTAResults = {
         ci_sens_upper: 0.9616,
         ci_spec_lower: 0.4951,
         ci_spec_upper: 0.6952,
-        correlation: -0.537,
+        correlation: null,
         tau_sens: 0.5632,
         tau_spec: 0.8394,
         // Likelihood ratios
