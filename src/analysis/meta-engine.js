@@ -1037,7 +1037,11 @@ export function randomEffectsMeta(studies, options = {}) {
             const d = valid[i].yi - pooledEffect;
             qAdj += w * d * d;
         }
-        const seHKSJ = Math.sqrt(qAdj / ((k - 1) * sumWiStar));
+        // Modified HKSJ (Knapp-Hartung / IQWiG ad-hoc floor): never let the
+        // scaling factor drop below 1, otherwise when Q < k-1 the HKSJ CI
+        // narrows *below* the Wald CI — the known anti-conservative failure.
+        const hksjScale = Math.max(1, qAdj / (k - 1));
+        const seHKSJ = Math.sqrt(hksjScale / sumWiStar);
 
         const tCrit = tQuantile(1 - alpha / 2, k - 1);
         ciLower = pooledEffect - tCrit * seHKSJ;

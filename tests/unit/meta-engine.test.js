@@ -60,6 +60,28 @@ describe('Meta-Engine Core Functions', () => {
             expect(ciWidthHKSJ).toBeGreaterThanOrEqual(ciWidthNoHKSJ * 0.9); // Allow some tolerance
         });
 
+        it('should not let HKSJ CI collapse below Wald when Q < k-1 (modified-HKSJ floor)', () => {
+            // Low-heterogeneity data (Q << df) is exactly where unfloored HKSJ
+            // produces an anti-conservative CI far narrower than the Wald CI.
+            const homogeneous = [
+                { yi: 0.50, vi: 0.10 },
+                { yi: 0.52, vi: 0.10 },
+                { yi: 0.49, vi: 0.10 },
+                { yi: 0.51, vi: 0.10 },
+                { yi: 0.50, vi: 0.10 }
+            ];
+            const withHKSJ = randomEffectsMeta(homogeneous, { method: 'DL', hksj: true });
+            const withoutHKSJ = randomEffectsMeta(homogeneous, { method: 'DL', hksj: false });
+
+            expect(withHKSJ.success).toBe(true);
+            expect(withHKSJ.heterogeneity.Q).toBeLessThan(withHKSJ.heterogeneity.df);
+
+            const ciWidthHKSJ = withHKSJ.pooled.ci_upper - withHKSJ.pooled.ci_lower;
+            const ciWidthNoHKSJ = withoutHKSJ.pooled.ci_upper - withoutHKSJ.pooled.ci_lower;
+            // With the floor, HKSJ must never be narrower than the Wald interval.
+            expect(ciWidthHKSJ).toBeGreaterThanOrEqual(ciWidthNoHKSJ);
+        });
+
         it('should calculate prediction interval', () => {
             const result = randomEffectsMeta(bcgTrials);
 
